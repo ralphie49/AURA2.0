@@ -356,12 +356,29 @@ class ProductionAgent:
             f"{toc}"
         )
 
+        print(f"   ⚡ Parallelizing {len(chapters_plan)} chapters (max 3 workers)...")
+        chapter_texts = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            future_map = {
+                executor.submit(
+                    self.write_heavy_chapter,
+                    chap.get("chapter_num", 0),
+                    chap.get("title", "Chapter"),
+                    chap.get("topic", "features"),
+                    chap.get("role", "Expert"),
+                    doc_type
+                ): chap.get("chapter_num", 0)
+                for chap in chapters_plan
+            }
+            for future in concurrent.futures.as_completed(future_map):
+                num = future_map[future]
+                try:
+                    chapter_texts[num] = future.result()
+                except Exception as e:
+                    chapter_texts[num] = f"# Chapter {num}\n(Generation failed: {e})\n\n"
+
         for chap in chapters_plan:
-            full_document += self.write_heavy_chapter(
-                chap.get("chapter_num", 0), chap.get("title", "Chapter"),
-                chap.get("topic", "features"), chap.get("role", "Expert"), doc_type
-            )
-            time.sleep(3)
+            full_document += chapter_texts.get(chap.get("chapter_num", 0), "")
         
         if doc_type == "technical":
             print("   🕸️  Visualizing Architecture Graph & Running AI Analysis...")

@@ -1,5 +1,6 @@
 import os
-import glob  
+import glob
+import concurrent.futures
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
@@ -21,7 +22,7 @@ app.add_middleware(
 
 NEO4J_URI = "bolt://127.0.0.1:7687"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "harish@12" # Make sure this matches your Neo4j password!
+NEO4J_PASSWORD = "19991207" # Make sure this matches your Neo4j password!
 
 global_chat_agent = ChatAgent()
 
@@ -40,15 +41,18 @@ def api_analyze_repo(request: AnalyzeRequest):
         agent.dep_engine = DependencyEngine("", NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
         agent.initialize_repo(request.url)
         
-        # 🔥 The Magic Logic: Generate whatever the user requested!
+        # Run report generation in parallel when both are requested
+        report_tasks = []
         if request.doc_type in ["technical", "both"]:
-            agent.generate_aura_report(doc_type="technical")
-            
+            report_tasks.append(("technical",))
         if request.doc_type in ["business", "both"]:
-            agent.generate_aura_report(doc_type="business")
-            
-        # Always generate release notes
-        agent.generate_business_manual()
+            report_tasks.append(("business",))
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            futures = [executor.submit(agent.generate_aura_report, doc_type=t[0]) for t in report_tasks]
+            notes_future = executor.submit(agent.generate_business_manual)
+            for f in concurrent.futures.as_completed(futures + [notes_future]):
+                f.result()  # re-raise any exception
         
         agent.dep_engine.close()
         
