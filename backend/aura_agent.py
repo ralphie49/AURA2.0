@@ -149,8 +149,8 @@ class DependencyEngine:
 
 class ProductionAgent:
     def __init__(self):
-        self.embeddings = NVIDIAEmbeddings(model="nvidia/nv-embed-v1", model_type="passage")
-        self.llm = ChatNVIDIA(model="meta/llama-3.1-8b-instruct", temperature=0.1)
+        self.embeddings = NVIDIAEmbeddings(model="nvidia/llama-nemotron-embed-vl-1b-v2")
+        self.llm = ChatNVIDIA(model="meta/llama-3.2-11b-vision-instruct", temperature=0.1, timeout=180)
         self.vector_db = None
         self.dep_engine = None
         self.current_repo_name = "UNKNOWN"
