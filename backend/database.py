@@ -15,6 +15,7 @@ class Neo4jManager:
     def connect(self):
         try:
             # The authentication happens here
+            print(f"URI: {self.uri} | USER: {self.user} | PASSWORD SET: {bool(self.password)} | LEN: {len(self.password) if self.password else 0}")
             self.driver = GraphDatabase.driver(
                 self.uri, 
                 auth=(self.user, self.password)
